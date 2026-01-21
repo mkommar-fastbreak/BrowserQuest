@@ -28,6 +28,7 @@ define(['jquery', 'animation', 'sprites'], function($, Animation, sprites) {
 
         	this.image = new Image();
         	this.image.src = this.filepath;
+        	this.whiteSprite = null; // Initialize to null
 
         	this.image.onload = function() {
         		self.isLoaded = true;
@@ -35,6 +36,10 @@ define(['jquery', 'animation', 'sprites'], function($, Animation, sprites) {
                 if(self.onload_func) {
                     self.onload_func();
                 }
+        	};
+        	
+        	this.image.onerror = function() {
+        	    log.error("Failed to load sprite image: " + self.filepath);
         	};
         },
     
@@ -50,6 +55,11 @@ define(['jquery', 'animation', 'sprites'], function($, Animation, sprites) {
     	},
 	
     	createHurtSprite: function() {
+    	    // Only create if image is loaded
+    	    if (!this.isLoaded || !this.image || !this.image.complete || this.image.width === 0 || this.image.height === 0) {
+    	        return null;
+    	    }
+    	    
     	    var canvas = document.createElement('canvas'),
     	        ctx = canvas.getContext('2d'),
     	        width = this.image.width,
@@ -82,11 +92,18 @@ define(['jquery', 'animation', 'sprites'], function($, Animation, sprites) {
             	    height: this.height
             	};
     	    } catch(e) {
-    	        log.error("Error getting image data for sprite : "+this.name);
+    	        log.error("Error getting image data for sprite : "+this.name + " - " + e);
+    	        return null;
     	    }
+    	    
+    	    return this.whiteSprite;
         },
 	
     	getHurtSprite: function() {
+    	    // Create hurt sprite lazily if not already created
+    	    if (!this.whiteSprite && this.isLoaded) {
+    	        this.createHurtSprite();
+    	    }
     	    return this.whiteSprite;
     	},
 	

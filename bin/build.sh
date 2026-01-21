@@ -10,6 +10,10 @@ CURDIR=$(pwd)
 echo "Deleting previous build directory"
 rm -rf $BUILDDIR
 
+echo "Copying shared files to client"
+mkdir -p $PROJECTDIR/shared
+cp ../shared/js/gametypes.js $PROJECTDIR/shared/gametypes.js
+
 echo "Building client with RequireJS"
 cd $PROJECTDIR
 node ../../bin/r.js -o build.js

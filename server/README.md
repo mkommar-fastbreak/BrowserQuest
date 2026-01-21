@@ -1,42 +1,58 @@
-BrowserQuest server documentation
-=================================
+# BrowserQuest Server
 
-The game server currently runs on nodejs v0.4.7 (but should run fine on the latest stable as well) and requires the latest versions of the following npm libraries:
+## Quick Start
 
-- underscore
-- log
-- bison
-- websocket
-- websocket-server
-- sanitizer
-- memcache (only if you want metrics)
+1. Install dependencies from the project root:
+   ```bash
+   npm install
+   ```
 
-All of them can be installed via `npm install -d` (this will install a local copy of all the dependencies in the node_modules directory)
+2. Configure the server:
+   ```bash
+   cp config_local.json-dist config_local.json
+   # Edit config_local.json with your settings
+   ```
 
+3. Start the server:
+   ```bash
+   npm start
+   # or
+   node js/main.js
+   ```
 
-Configuration
--------------
+## Configuration
 
-The server settings (number of worlds, number of players per world, etc.) can be configured.
-Copy `config_local.json-dist` to a new `config_local.json` file, then edit it. The server will override default settings with this file.
+The server reads configuration from `config.json` (default) or `config_local.json` (overrides default).
 
+**Configuration Options:**
+- `port`: WebSocket server port (default: 8000)
+- `debug_level`: Logging level - "error", "warn", "info", or "debug" (default: "info")
+- `nb_players_per_world`: Maximum players per world instance (default: 200)
+- `nb_worlds`: Number of world instances (default: 5)
+- `map_filepath`: Path to the world map JSON file
+- `metrics_enabled`: Enable metrics collection (default: false)
 
-Deployment
-----------
+**Environment Variables:**
+- `BROWSERQUEST_PORT`: Server port
+- `BROWSERQUEST_DEBUG_LEVEL`: Logging level
+- `BROWSERQUEST_PLAYERS_PER_WORLD`: Players per world
+- `BROWSERQUEST_NB_WORLDS`: Number of worlds
+- `BROWSERQUEST_METRICS_ENABLED`: Enable metrics (true/false)
 
-In order to deploy the server, simply copy the `server` and `shared` directories to the staging/production server.
+## Status Endpoint
 
-Then run `node server/js/main.js` in order to start the server.
+The server provides a status endpoint for monitoring:
 
+```
+GET http://localhost:8000/status
+```
 
-Note: the `shared` directory is the only one in the project which is a server dependency.
+Returns a JSON array with the number of players in each world instance.
 
+## Dependencies
 
-Monitoring
-----------
+- `ws`: Modern WebSocket library
+- `underscore`: Utility functions
+- `sanitizer`: Input sanitization
 
-The server has a status URL which can be used as a health check or simply as a way to monitor player population.
-
-Send a GET request to: `http://[host]:[port]/status`
-
-It will return a JSON array containing the number of players in all instanced worlds on this game server.
+See the main README.md for full documentation.

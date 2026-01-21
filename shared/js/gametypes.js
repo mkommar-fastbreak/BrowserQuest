@@ -181,11 +181,13 @@ Types.rankedArmors = [
 ];
 
 Types.getWeaponRank = function(weaponKind) {
-    return _.indexOf(Types.rankedWeapons, weaponKind);
+    // Use native indexOf instead of underscore for compatibility
+    return Types.rankedWeapons.indexOf(weaponKind);
 };
 
 Types.getArmorRank = function(armorKind) {
-    return _.indexOf(Types.rankedArmors, armorKind);
+    // Use native indexOf instead of underscore for compatibility
+    return Types.rankedArmors.indexOf(armorKind);
 };
 
 Types.isPlayer = function(kind) {

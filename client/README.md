@@ -1,23 +1,49 @@
-BrowserQuest client documentation
-=================================
+# BrowserQuest Client
 
-The client directory should never be directly deployed to staging/production. Deployment steps:
+## Development Setup
 
-1) Configure the websocket host/port:
+1. Configure the client for local development:
+   ```bash
+   cp config/config_local.json-dist config/config_local.json
+   # Edit config_local.json to match your server settings
+   ```
 
-In the client/config/ directory, copy config_build.json-dist to a new config_build.json file.
-Edit the contents of this file to change host/port settings.
+2. Serve the client files using a local web server:
+   ```bash
+   # Using Python 3
+   python3 -m http.server 8080
+   
+   # Using Node.js http-server
+   http-server -p 8080
+   ```
 
-2) Run the following commands from the project root:
+3. Open `http://localhost:8080` in your browser.
 
-(Note: nodejs is required to run the build script)
+## Production Build
 
-* cd bin
-* chmod +x build.sh
-* ./build.sh
+For production, build an optimized version:
 
-This will use the RequireJS optimizer tool to create a client-build/ directory containing a production-ready version of BrowserQuest. 
+1. Configure the production WebSocket host:
+   ```bash
+   cp config/config_build.json-dist config/config_build.json
+   # Edit config_build.json with your production server host/port
+   ```
 
-A build log file will also be created at bin/build.txt.
+2. Build the client:
+   ```bash
+   npm run build
+   ```
 
-The client-build directory can be renamed and deployed anywhere. It has no dependencies to any other file/folder in the repository.
+This creates an optimized build in `../client-build/` that can be deployed to any static file server.
+
+## Configuration Files
+
+- `config_local.json`: Development configuration (not included in build)
+- `config_build.json`: Production configuration (included in build)
+
+**Configuration Options:**
+- `host`: WebSocket server hostname
+- `port`: WebSocket server port
+- `dispatcher`: (local only) Whether to use dispatcher mode
+
+See the main README.md for full documentation.

@@ -2,14 +2,18 @@
 var fs = require('fs'),
     Metrics = require('./metrics');
 
+var Log = require('./log');
+
+// Global log variable
+var log;
 
 function main(config) {
     var ws = require("./ws"),
         WorldServer = require("./worldserver"),
-        Log = require('log'),
+        Player = require("./player"),
         _ = require('underscore'),
         server = new ws.MultiVersionWebsocketServer(config.port),
-        metrics = config.metrics_enabled ? new Metrics(config) : null;
+        metrics = config.metrics_enabled ? new Metrics(config) : null,
         worlds = [],
         lastTotalPlayers = 0,
         checkPopulationInterval = setInterval(function() {
@@ -25,14 +29,11 @@ function main(config) {
             }
         }, 1000);
     
-    switch(config.debug_level) {
-        case "error":
-            log = new Log(Log.ERROR); break;
-        case "debug":
-            log = new Log(Log.DEBUG); break;
-        case "info":
-            log = new Log(Log.INFO); break;
-    };
+    // Create logger based on config and set as global
+    log = Log.setGlobal(config.debug_level || 'info');
+    
+    // Set log in ws module
+    ws.setLog(log);
     
     log.info("Starting BrowserQuest game server...");
     
@@ -119,9 +120,30 @@ function getConfigFile(path, callback) {
     });
 }
 
+// Merge environment variables with config
+function mergeEnvConfig(config) {
+    if (process.env.BROWSERQUEST_PORT) {
+        config.port = parseInt(process.env.BROWSERQUEST_PORT, 10);
+    }
+    if (process.env.BROWSERQUEST_DEBUG_LEVEL) {
+        config.debug_level = process.env.BROWSERQUEST_DEBUG_LEVEL;
+    }
+    if (process.env.BROWSERQUEST_PLAYERS_PER_WORLD) {
+        config.nb_players_per_world = parseInt(process.env.BROWSERQUEST_PLAYERS_PER_WORLD, 10);
+    }
+    if (process.env.BROWSERQUEST_NB_WORLDS) {
+        config.nb_worlds = parseInt(process.env.BROWSERQUEST_NB_WORLDS, 10);
+    }
+    if (process.env.BROWSERQUEST_METRICS_ENABLED) {
+        config.metrics_enabled = process.env.BROWSERQUEST_METRICS_ENABLED === 'true';
+    }
+    return config;
+}
+
 var defaultConfigPath = './server/config.json',
     customConfigPath = './server/config_local.json';
 
+// Allow config path override via command line
 process.argv.forEach(function (val, index, array) {
     if(index === 2) {
         customConfigPath = val;
@@ -130,12 +152,14 @@ process.argv.forEach(function (val, index, array) {
 
 getConfigFile(defaultConfigPath, function(defaultConfig) {
     getConfigFile(customConfigPath, function(localConfig) {
-        if(localConfig) {
-            main(localConfig);
-        } else if(defaultConfig) {
-            main(defaultConfig);
+        var config = localConfig || defaultConfig;
+        if(config) {
+            // Merge with environment variables
+            config = mergeEnvConfig(config);
+            main(config);
         } else {
             console.error("Server cannot start without any configuration file.");
+            console.error("Please create server/config.json or server/config_local.json");
             process.exit(1);
         }
     });

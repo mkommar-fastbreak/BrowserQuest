@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: browserquest-server
+    env: node
+    buildCommand: npm install
+    startCommand: node server/js/main.js
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: BROWSERQUEST_DEBUG_LEVEL
+        value: info
+      - key: BROWSERQUEST_NB_WORLDS
+        value: 5
+      - key: BROWSERQUEST_PLAYERS_PER_WORLD
+        value: 200

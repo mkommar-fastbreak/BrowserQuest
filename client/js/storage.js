@@ -17,7 +17,8 @@ define(function() {
                     name: "",
                     weapon: "",
                     armor: "",
-                    image: ""
+                    image: "",
+                    checkpointId: null
                 },
                 achievements: {
                     unlocked: [],
@@ -82,6 +83,15 @@ define(function() {
             this.setPlayerImage(img);
             this.setPlayerArmor(armor);
             this.setPlayerWeapon(weapon);
+        },
+        
+        setPlayerCheckpoint: function(checkpointId) {
+            this.data.player.checkpointId = checkpointId;
+            this.save();
+        },
+        
+        getPlayerCheckpoint: function() {
+            return this.data.player.checkpointId;
         },
     
         // Achievements

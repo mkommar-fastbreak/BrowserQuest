@@ -80,6 +80,10 @@ define(['area'], function(Area) {
             sound.addEventListener('error', function (e) {
                 log.error("Error: "+ path +" could not be loaded.");
                 self.sounds[name] = null;
+                // Still call the callback so loading can continue
+                if(loaded_callback) {
+                    loaded_callback();
+                }
             }, false);
         
             sound.preload = "auto";
@@ -98,10 +102,17 @@ define(['area'], function(Area) {
         },
     
         loadMusic: function(name, handleLoaded) {
-            this.load("audio/music/", name, handleLoaded, 1);
-            var music = this.sounds[name][0];
-            music.loop = true;
-            music.addEventListener('ended', function() { music.play() }, false);
+            this.load("audio/music/", name, function() {
+                // Only set up loop if music loaded successfully
+                if (this.sounds[name] && this.sounds[name][0]) {
+                    var music = this.sounds[name][0];
+                    music.loop = true;
+                    music.addEventListener('ended', function() { music.play() }, false);
+                }
+                if (handleLoaded) {
+                    handleLoaded();
+                }
+            }.bind(this), 1);
         },
     
         getSound: function(name) {

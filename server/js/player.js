@@ -57,6 +57,17 @@ module.exports = Player = Character.extend({
                 self.equipWeapon(message[3]);
                 self.orientation = Utils.randomOrientation();
                 self.updateHitPoints();
+                
+                // Restore checkpoint if provided (for state restoration on refresh)
+                if(message.length > 4 && message[4] !== null && message[4] !== undefined) {
+                    var checkpointId = parseInt(message[4], 10);
+                    var checkpoint = self.server.map.getCheckpoint(checkpointId);
+                    if(checkpoint) {
+                        self.lastCheckpoint = checkpoint;
+                        log.info("Restoring player " + self.name + " to checkpoint " + checkpointId);
+                    }
+                }
+                
                 self.updatePosition();
                 
                 self.server.addPlayer(self);

@@ -85,27 +85,42 @@ define(['jquery', 'storage'], function($, Storage) {
             var self = this,
                 firstTimePlaying = !self.storage.hasAlreadyPlayed();
             
-            if(username && !this.game.started) {
-                var optionsSet = false,
-                    config = this.config;
-
-                //>>includeStart("devHost", pragmas.devHost);
-                if(config.local) {
-                    log.debug("Starting game with local dev config.");
-                    this.game.setServerOptions(config.local.host, config.local.port, username);
-                } else {
-                    log.debug("Starting game with default dev config.");
-                    this.game.setServerOptions(config.dev.host, config.dev.port, username);
-                }
-                optionsSet = true;
-                //>>includeEnd("devHost");
+            if(username && this.game && !this.game.started) {
+                var config = this.config;
+                var useConfig = null;
                 
+                // Check build config first (production)
                 //>>includeStart("prodHost", pragmas.prodHost);
-                if(!optionsSet) {
-                    log.debug("Starting game with build config.");
-                    this.game.setServerOptions(config.build.host, config.build.port, username);
+                if(config.build && config.build.host) {
+                    // Use build config if host is set (even if localhost for testing)
+                    if(config.build.host !== "localhost" || !config.local) {
+                        log.info("Using build config:", config.build);
+                        useConfig = config.build;
+                    }
                 }
                 //>>includeEnd("prodHost");
+                
+                // Check local/dev config (development)
+                //>>includeStart("devHost", pragmas.devHost);
+                if(!useConfig) {
+                    if(config.local && config.local.host) {
+                        log.info("Using local dev config:", config.local);
+                        useConfig = config.local;
+                    } else if(config.dev && config.dev.host) {
+                        log.info("Using default dev config:", config.dev);
+                        useConfig = config.dev;
+                    }
+                }
+                //>>includeEnd("devHost");
+                
+                // Final fallback
+                if(!useConfig) {
+                    log.warn("No valid config found, using defaults");
+                    useConfig = config.build || config.dev || { host: "localhost", port: 8000 };
+                }
+                
+                log.info("Connecting to server:", useConfig.host + ":" + useConfig.port);
+                this.game.setServerOptions(useConfig.host, useConfig.port, username);
 
                 this.center();
                 this.game.run(function() {
@@ -118,6 +133,8 @@ define(['jquery', 'storage'], function($, Storage) {
         },
 
         setMouseCoordinates: function(event) {
+            if (!this.game) return;
+            
             var gamePos = $('#container').offset(),
                 scale = this.game.renderer.getScaleFactor(),
                 width = this.game.renderer.getWidth(),
@@ -382,10 +399,10 @@ define(['jquery', 'storage'], function($, Storage) {
         toggleAbout: function() {
             var currentState = $('#parchment').attr('class');
 
-            if(this.game.started) {
+            if(this.game && this.game.started) {
                 $('#parchment').removeClass().addClass('about');
                 $('body').toggleClass('about');
-                if(!this.game.player) {
+                if(this.game.player === undefined || !this.game.player) {
                     $('body').toggleClass('death');
                 }
                 if($('body').hasClass('credits')) {

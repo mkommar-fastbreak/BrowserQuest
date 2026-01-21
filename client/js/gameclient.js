@@ -1,5 +1,5 @@
 
-define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory, BISON) {
+define(['player', 'entityfactory', 'lib/bison', 'shared/gametypes'], function(Player, EntityFactory, BISON) {
 
     var GameClient = Class.extend({
         init: function(host, port) {
@@ -45,8 +45,10 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
         },
         
         connect: function(dispatcherMode) {
-            var url = "ws://"+ this.host +":"+ this.port +"/",
-                self = this;
+            // Use wss:// for secure connections (port 443 or when hostname suggests HTTPS)
+            var protocol = (this.port === 443 || window.location.protocol === 'https:') ? "wss://" : "ws://";
+            var url = protocol + this.host + (this.port === 443 ? "" : ":" + this.port) + "/";
+            var self = this;
             
             log.info("Trying to connect to server : "+url);
 
@@ -464,11 +466,16 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
             this.blink_callback = callback;
         },
 
-        sendHello: function(player) {
-            this.sendMessage([Types.Messages.HELLO,
-                              player.name,
-                              Types.getKindFromString(player.getSpriteName()),
-                              Types.getKindFromString(player.getWeaponName())]);
+        sendHello: function(player, checkpointId) {
+            var message = [Types.Messages.HELLO,
+                          player.name,
+                          Types.getKindFromString(player.getSpriteName()),
+                          Types.getKindFromString(player.getWeaponName())];
+            // Include checkpoint ID if available for state restoration
+            if(checkpointId !== null && checkpointId !== undefined) {
+                message.push(checkpointId);
+            }
+            this.sendMessage(message);
         },
 
         sendMove: function(x, y) {

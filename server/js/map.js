@@ -1,6 +1,5 @@
 
-var cls = require('./lib/class')
-    path = require('path'),
+var cls = require('./lib/class'),
     fs = require('fs'),
     _ = require('underscore'),
     Utils = require('./utils'),
@@ -12,16 +11,25 @@ module.exports = Map = cls.Class.extend({
     
     	this.isLoaded = false;
     
-    	path.exists(filepath, function(exists) {
-            if(!exists) {
+    	// Check if file exists using modern fs.access
+    	fs.access(filepath, fs.constants.F_OK, function(err) {
+            if(err) {
                 log.error(filepath + " doesn't exist.");
                 return;
             }
         
             fs.readFile(filepath, function(err, file) {
-                var json = JSON.parse(file.toString());
-            
-                self.initMap(json);
+                if(err) {
+                    log.error("Error reading file " + filepath + ": " + err);
+                    return;
+                }
+                
+                try {
+                    var json = JSON.parse(file.toString());
+                    self.initMap(json);
+                } catch(e) {
+                    log.error("Error parsing JSON from " + filepath + ": " + e);
+                }
             });
         });
     },

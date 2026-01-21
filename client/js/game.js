@@ -1,7 +1,7 @@
 
 define(['infomanager', 'bubble', 'renderer', 'map', 'animation', 'sprite', 'tile',
         'warrior', 'gameclient', 'audio', 'updater', 'transition', 'pathfinder',
-        'item', 'mob', 'npc', 'player', 'character', 'chest', 'mobs', 'exceptions', 'config', '../../shared/js/gametypes'],
+        'item', 'mob', 'npc', 'player', 'character', 'chest', 'mobs', 'exceptions', 'config', 'shared/gametypes'],
 function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedTile,
          Warrior, GameClient, AudioManager, Updater, Transition, Pathfinder,
          Item, Mob, Npc, Player, Character, Chest, Mobs, Exceptions, config) {
@@ -13,6 +13,8 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             this.ready = false;
             this.started = false;
             this.hasNeverStarted = true;
+            this.helloSent = false; // Track if HELLO has been sent
+            this.connectedCallbackRegistered = false; // Track if callback is registered
         
             this.renderer = null;
             this.updater = null;
@@ -151,7 +153,9 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             var self = this;
         
             Types.forEachArmorKind(function(kind, kindName) {
-                self.sprites[kindName].createHurtSprite();
+                if (self.sprites[kindName] && self.sprites[kindName].isLoaded) {
+                    self.sprites[kindName].createHurtSprite();
+                }
             });
         },
     
@@ -610,6 +614,9 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         },
     
         setServerOptions: function(host, port, username) {
+            // Reset flags when setting new server options (reconnection)
+            this.helloSent = false;
+            this.connectedCallbackRegistered = false;
             this.host = host;
             this.port = port;
             this.username = username;
@@ -738,14 +745,25 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 self.client.connect(); // connect to actual game server
             });
             
-            this.client.onConnected(function() {
-                log.info("Starting client/server handshake");
+            // Only register onConnected callback once
+            if (!this.connectedCallbackRegistered) {
+                this.client.onConnected(function() {
+                    // Prevent sending HELLO multiple times
+                    if (self.helloSent) {
+                        log.warn("HELLO already sent, skipping duplicate");
+                        return;
+                    }
+                    
+                    log.info("Starting client/server handshake");
+                    
+                    self.player.name = self.username;
+                    self.started = true;
+                    self.helloSent = true;
                 
-                self.player.name = self.username;
-                self.started = true;
-            
-                self.sendHello(self.player);
-            });
+                    self.sendHello(self.player);
+                });
+                this.connectedCallbackRegistered = true;
+            }
         
             this.client.onEntityList(function(list) {
                 var entityIds = _.pluck(self.entities, 'id'),
@@ -1511,7 +1529,12 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
          * @see GameClient.sendHello
          */
         sendHello: function() {
-            this.client.sendHello(this.player);
+            // Get saved checkpoint ID from storage for state restoration
+            var checkpointId = null;
+            if(this.storage && this.storage.hasAlreadyPlayed()) {
+                checkpointId = this.storage.getPlayerCheckpoint();
+            }
+            this.client.sendHello(this.player, checkpointId);
         },
 
         /**
@@ -2388,6 +2411,11 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 if(!lastCheckpoint || (lastCheckpoint && lastCheckpoint.id !== checkpoint.id)) {
                     this.player.lastCheckpoint = checkpoint;
                     this.client.sendCheck(checkpoint.id);
+                    // Save checkpoint to localStorage for state restoration
+                    if(this.storage) {
+                        this.storage.setPlayerCheckpoint(checkpoint.id);
+                        log.debug("Saved checkpoint " + checkpoint.id + " to localStorage");
+                    }
                 }
             }
         },
