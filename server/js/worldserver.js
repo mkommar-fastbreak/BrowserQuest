@@ -83,6 +83,11 @@ module.exports = World = cls.Class.extend({
                         } else {
                             self.moveEntity(mob, pos.x, pos.y);
                         }
+                    } else if(mob.target) {
+                        // Target entity no longer exists, clear the reference
+                        mob.clearTarget();
+                        mob.forgetEveryone();
+                        player.removeAttacker(mob);
                     }
                 });
             };
@@ -124,6 +129,7 @@ module.exports = World = cls.Class.extend({
         
         // Called when an entity is attacked by another entity
         this.onEntityAttack(function(attacker) {
+            if(!attacker.target) return;
             var target = self.getEntityById(attacker.target);
             if(target && attacker.type === "mob") {
                 var pos = self.findPositionNextTo(attacker, target);
@@ -273,7 +279,10 @@ module.exports = World = cls.Class.extend({
         if(group) {
             _.each(group.players, function(playerId) {
                 if(playerId != ignoredPlayer) {
-                    self.pushToPlayer(self.getEntityById(playerId), message);
+                    var player = self.getEntityById(playerId);
+                    if(player) {
+                        self.pushToPlayer(player, message);
+                    }
                 }
             });
         } else {
@@ -499,7 +508,10 @@ module.exports = World = cls.Class.extend({
         if(id in this.entities) {
             return this.entities[id];
         } else {
-            log.error("Unknown entity : " + id);
+            // Entity may have been removed (e.g., player disconnected, item picked up, mob killed)
+            // This is normal and expected, so log as debug instead of error
+            log.debug("Entity not found (may have been removed): " + id);
+            return null;
         }
     },
     
